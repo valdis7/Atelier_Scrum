@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { CATEGORIES } from '../data/seed.js';
 
 // Routes /api/tools. Un emplacement par story : on ajoute son code JUSTE SOUS sa ligne
 // [US-xx], sans toucher aux autres, pour éviter les conflits de merge.
@@ -7,6 +8,19 @@ export function toolsRouter(db) {
   const router = Router();
 
   // [US-10] filtrer par catégorie (GET /?category=)
+  router.get('/', (req, res, next) => {
+    const { category } = req.query;
+    if (category === undefined) return next();
+    if (!CATEGORIES.includes(category)) {
+      return res.status(400).json({ field: 'category', error: `Catégorie inconnue : ${category}` });
+    }
+    const rank = { available: 0, lent: 1, unavailable: 2 };
+    const list = db.tools
+      .filter((t) => t.category === category)
+      .map((t) => ({ id: t.id, name: t.name, category: t.category, status: t.status }))
+      .sort((a, b) => rank[a.status] - rank[b.status]);
+    return res.status(200).json(list);
+  });
 
   // [US-11] rechercher par mot-clé (GET /?q=)
 
