@@ -31,6 +31,16 @@ export function toolsRouter(db) {
   });
 
   // [US-14] historique des prêts d'un outil (GET /:id/loans)
+  router.get('/:id/loans', (req, res) => {
+    const tool = db.tools.find((t) => t.id === req.params.id);
+    if (!tool) return res.status(404).json({ error: 'Outil introuvable' });
+
+    const history = db.loans
+      .filter((l) => l.toolId === tool.id && ['accepted', 'returned'].includes(l.status))
+      .sort((a, b) => b.startDate.localeCompare(a.startDate))
+      .map((l) => ({ ...l, borrower: db.users.find((u) => u.id === l.borrowerId)?.firstName ?? null }));
+    return res.status(200).json(history);
+  });
 
   // [US-03] détail d'un outil (GET /:id)
   router.get('/:id', (req, res) => {
