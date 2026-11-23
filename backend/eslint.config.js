@@ -9,5 +9,9 @@ export default [
       sourceType: 'module',
       globals: { ...globals.node },
     },
+    rules: {
+      // Les routeurs reçoivent db avant que les stories ne l'utilisent.
+      'no-unused-vars': ['error', { args: 'none' }],
+    },
   },
 ];

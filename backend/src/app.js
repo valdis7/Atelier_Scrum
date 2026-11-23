@@ -1,5 +1,8 @@
 import express from 'express';
 import { createSeed } from './data/seed.js';
+import { toolsRouter } from './routes/tools.js';
+import { loansRouter } from './routes/loans.js';
+import { usersRouter } from './routes/users.js';
 
 // Chaque appel crée une app avec ses propres données : les tests restent indépendants.
 export function createApp(db = createSeed()) {
@@ -18,7 +21,10 @@ export function createApp(db = createSeed()) {
     res.status(200).json({ status: 'ok' });
   });
 
-  // Les routes des stories (US-01, US-02...) s'ajoutent ici ou dans src/routes/.
+  // Le code des stories va dans src/routes/, chacune à son emplacement [US-xx].
+  app.use('/api/tools', toolsRouter(db));
+  app.use('/api/loans', loansRouter(db));
+  app.use('/api/users', usersRouter(db));
 
   return app;
 }
