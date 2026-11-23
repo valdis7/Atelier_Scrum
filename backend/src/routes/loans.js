@@ -83,6 +83,22 @@ export function loansRouter(db) {
   });
 
   // [US-07] déclarer le retour (PATCH /:id/return)
+  router.patch('/:id/return', (req, res) => {
+    const loan = db.loans.find((l) => l.id === req.params.id);
+    if (!loan) return res.status(404).json({ error: 'Prêt introuvable' });
+
+    const tool = db.tools.find((t) => t.id === loan.toolId);
+    if (!tool || !req.userId || tool.ownerId !== req.userId) {
+      return res.status(403).json({ error: 'Seul le propriétaire peut déclarer le retour' });
+    }
+    if (loan.status !== 'accepted') {
+      return res.status(409).json({ error: `Seul un prêt accepté peut être rendu (statut : ${loan.status})` });
+    }
+
+    loan.status = 'returned';
+    tool.status = 'available';
+    return res.status(200).json(loan);
+  });
 
   // [US-13] noter l'emprunteur (POST /:id/rating)
   router.post('/:id/rating', (req, res) => {
