@@ -23,6 +23,15 @@ export function toolsRouter(db) {
   });
 
   // [US-11] rechercher par mot-clé (GET /?q=)
+  router.get('/', (req, res, next) => {
+    const { q } = req.query;
+    if (q === undefined) return next();
+    const needle = String(q).toLocaleLowerCase('fr');
+    const list = db.tools
+      .filter((t) => `${t.name} ${t.description ?? ''}`.toLocaleLowerCase('fr').includes(needle))
+      .map((t) => ({ id: t.id, name: t.name, category: t.category, status: t.status }));
+    return res.status(200).json(list);
+  });
 
   // [US-01] catalogue (GET /)
   router.get('/', (req, res) => {
