@@ -85,6 +85,24 @@ export function loansRouter(db) {
   // [US-07] déclarer le retour (PATCH /:id/return)
 
   // [US-13] noter l'emprunteur (POST /:id/rating)
+  router.post('/:id/rating', (req, res) => {
+    const loan = db.loans.find((l) => l.id === req.params.id);
+    if (!loan) return res.status(404).json({ error: 'Prêt introuvable' });
+
+    const tool = db.tools.find((t) => t.id === loan.toolId);
+    if (!tool || !req.userId || tool.ownerId !== req.userId) {
+      return res.status(403).json({ error: 'Seul le propriétaire peut noter l\'emprunteur' });
+    }
+    const { score } = req.body ?? {};
+    if (!Number.isInteger(score) || score < 1 || score > 5) {
+      return res.status(400).json({ field: 'score', error: 'La note va de 1 à 5' });
+    }
+    if (loan.status !== 'returned') return res.status(409).json({ error: 'On ne note qu\'un prêt rendu' });
+    if (loan.rating !== undefined) return res.status(409).json({ error: 'Ce prêt a déjà été noté' });
+
+    loan.rating = score;
+    return res.status(201).json(loan);
+  });
 
   return router;
 }
