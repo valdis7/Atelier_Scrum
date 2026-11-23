@@ -11,6 +11,13 @@ export function toolsRouter(db) {
   // [US-11] rechercher par mot-clé (GET /?q=)
 
   // [US-01] catalogue (GET /)
+  router.get('/', (req, res) => {
+    const rank = { available: 0, lent: 1, unavailable: 2 };
+    const list = db.tools
+      .map((t) => ({ id: t.id, name: t.name, category: t.category, status: t.status }))
+      .sort((a, b) => rank[a.status] - rank[b.status]);
+    return res.status(200).json(list);
+  });
 
   // [US-02] proposer un outil (POST /)
 
