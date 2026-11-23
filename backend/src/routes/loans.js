@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 
 // Routes /api/loans. Un emplacement par story : on ajoute son code JUSTE SOUS sa ligne
 // [US-xx], sans toucher aux autres, pour éviter les conflits de merge.
@@ -10,6 +11,29 @@ export function loansRouter(db) {
   // [US-06] empêcher les chevauchements (avant US-04, sur POST /)
 
   // [US-04] demander un emprunt (POST /)
+  router.post('/', (req, res) => {
+    if (!req.userId) return res.status(403).json({ error: 'En-tête X-User-Id requis' });
+
+    const { toolId, startDate, endDate } = req.body ?? {};
+    const isDate = (d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(d));
+    if (!toolId) return res.status(400).json({ field: 'toolId', error: 'toolId est obligatoire' });
+    if (!isDate(startDate)) return res.status(400).json({ field: 'startDate', error: 'Date au format AAAA-MM-JJ' });
+    if (!isDate(endDate)) return res.status(400).json({ field: 'endDate', error: 'Date au format AAAA-MM-JJ' });
+    if (endDate < startDate) {
+      return res.status(400).json({ field: 'endDate', error: 'La date de fin est antérieure à la date de début' });
+    }
+
+    const tool = db.tools.find((t) => t.id === toolId);
+    if (!tool) return res.status(404).json({ error: 'Outil introuvable' });
+    if (tool.ownerId === req.userId) {
+      return res.status(400).json({ field: 'toolId', error: 'Impossible de demander son propre outil' });
+    }
+    if (tool.status === 'unavailable') return res.status(409).json({ error: 'Outil indisponible' });
+
+    const loan = { id: randomUUID(), toolId, borrowerId: req.userId, startDate, endDate, status: 'pending' };
+    db.loans.push(loan);
+    return res.status(201).json(loan);
+  });
 
   // [US-05] accepter ou refuser une demande (PATCH /:id)
   router.patch('/:id', (req, res) => {
