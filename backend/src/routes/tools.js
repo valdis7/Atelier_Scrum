@@ -34,6 +34,25 @@ export function toolsRouter(db) {
   });
 
   // [US-02] proposer un outil (POST /)
+  router.post('/', (req, res) => {
+    if (!req.userId) return res.status(403).json({ error: 'En-tête X-User-Id requis' });
+
+    const { name, category, description = '' } = req.body ?? {};
+    const trimmed = typeof name === 'string' ? name.trim() : '';
+    if (trimmed.length < 2 || trimmed.length > 60) {
+      return res.status(400).json({ field: 'name', error: 'Le nom doit faire entre 2 et 60 caractères' });
+    }
+    if (!CATEGORIES.includes(category)) {
+      return res.status(400).json({ field: 'category', error: `Catégorie autorisée : ${CATEGORIES.join(', ')}` });
+    }
+    if (typeof description !== 'string' || description.length > 300) {
+      return res.status(400).json({ field: 'description', error: 'La description fait 300 caractères maximum' });
+    }
+
+    const tool = { id: globalThis.crypto.randomUUID(), ownerId: req.userId, name: trimmed, category, description, status: 'available' };
+    db.tools.push(tool);
+    return res.status(201).json(tool);
+  });
 
   // [US-12] mes outils et demandes reçues (GET /mine)
   router.get('/mine', (req, res) => {
