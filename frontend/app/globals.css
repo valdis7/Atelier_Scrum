@@ -1432,3 +1432,63 @@ main {
 .available-tag.status-lent span { background: #e0a100; }
 .available-tag.status-unavailable span { background: #b4b4b4; }
 .available-tag.status-unavailable { opacity: 0.85; }
+
+/* US-09 : profil, fiche et demande d'emprunt */
+.profile-select select {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0.55rem 1rem;
+  font: inherit;
+  cursor: pointer;
+}
+.panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(25, 60, 48, 0.35);
+}
+.tool-panel {
+  position: relative;
+  width: min(440px, 100%);
+  height: 100%;
+  overflow-y: auto;
+  background: var(--paper);
+  padding: 3rem 2rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.12);
+}
+.tool-panel h3 { font-size: 1.8rem; line-height: 1.1; }
+.tool-panel .available-tag { position: static; align-self: flex-start; }
+.panel-close {
+  position: absolute;
+  top: 1rem;
+  right: 1.2rem;
+  border: 0;
+  background: none;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--ink);
+  cursor: pointer;
+}
+.panel-category { color: var(--muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.08em; }
+.panel-description { color: var(--muted); }
+.loan-form { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-top: 0.5rem; }
+.loan-form label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.85rem; color: var(--muted); }
+.loan-form input {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.6rem 0.7rem;
+  font: inherit;
+  color: var(--ink);
+  background: #fff;
+}
+.loan-form .button { grid-column: 1 / -1; justify-content: center; }
+.panel-message { border-radius: 12px; padding: 0.8rem 1rem; font-size: 0.9rem; }
+.panel-message.ok { background: #e5f4e4; color: var(--green-dark); }
+.panel-message.error { background: #fbebeb; color: #8a1f1f; }

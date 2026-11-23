@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import { ToolPanel } from "./tool-panel";
 
 type ToolStatus = "available" | "lent" | "unavailable";
 
@@ -81,6 +82,17 @@ export default function Home() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [tools, setTools] = useState<Tool[]>([]);
   const [loadState, setLoadState] = useState<"loading" | "ok" | "error">("loading");
+  const [users, setUsers] = useState<{ id: string; firstName: string; district: string }[]>([]);
+  const [userId, setUserId] = useState("");
+  const [openToolId, setOpenToolId] = useState<string | null>(null);
+
+  // Profils pour choisir l'utilisateur courant (US-09 : GET /api/users).
+  useEffect(() => {
+    fetch("/api/users")
+      .then((res) => (res.ok ? res.json() : []))
+      .then(setUsers)
+      .catch(() => setUsers([]));
+  }, []);
 
   // Catalogue chargé depuis l'API (US-01 : GET /api/tools).
   useEffect(() => {
@@ -163,7 +175,17 @@ export default function Home() {
         </nav>
 
         <div className="header-actions">
-          <a className="login-link" href="#connexion">Se connecter</a>
+          <label className="profile-select">
+            <span className="sr-only">Votre profil</span>
+            <select value={userId} onChange={(event) => setUserId(event.target.value)}>
+              <option value="">Choisir mon profil</option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.firstName} ({user.district})
+                </option>
+              ))}
+            </select>
+          </label>
           <a className="button button-dark button-small" href="#proposer">
             Prêter un outil <ArrowRight />
           </a>
@@ -310,6 +332,9 @@ export default function Home() {
                       <h3>{tool.name}</h3>
                     </div>
                     <p className="tool-location">{tool.category}</p>
+                    <button className="text-link" type="button" onClick={() => setOpenToolId(tool.id)}>
+                      Voir la fiche <ArrowRight />
+                    </button>
                   </div>
                 </article>
               );
@@ -404,6 +429,10 @@ export default function Home() {
           Prêter mon premier outil <ArrowRight />
         </a>
       </section>
+
+      {openToolId && (
+        <ToolPanel toolId={openToolId} userId={userId} onClose={() => setOpenToolId(null)} />
+      )}
 
       <footer className="site-footer" id="connexion">
         <a className="brand footer-brand" href="#" aria-label="BricoLoop, accueil">
