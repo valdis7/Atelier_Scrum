@@ -1427,3 +1427,8 @@ main {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Statuts de l'énoncé : disponible, prêté, indisponible */
+.available-tag.status-lent span { background: #e0a100; }
+.available-tag.status-unavailable span { background: #b4b4b4; }
+.available-tag.status-unavailable { opacity: 0.85; }

@@ -1,78 +1,42 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 
+type ToolStatus = "available" | "lent" | "unavailable";
+
+type Tool = {
+  id: string;
+  name: string;
+  category: string;
+  status: ToolStatus;
+};
+
+// Catégories autorisées par l'énoncé.
 const categories = [
   { name: "Tout voir", emoji: "✨" },
-  { name: "Bricolage", emoji: "🔧" },
-  { name: "Jardin", emoji: "🌿" },
-  { name: "Maison", emoji: "🪜" },
-  { name: "Festivité", emoji: "🎉" },
+  { name: "Perçage", emoji: "🔩" },
+  { name: "Jardinage", emoji: "🌿" },
+  { name: "Peinture", emoji: "🎨" },
+  { name: "Nettoyage", emoji: "🧽" },
+  { name: "Mesure", emoji: "📏" },
+  { name: "Autre", emoji: "🧰" },
 ];
 
-const tools = [
-  {
-    id: 1,
-    name: "Perceuse-visseuse Bosch",
-    category: "Bricolage",
-    price: 5,
-    owner: "Camille",
-    initials: "C",
-    location: "Paris 11e",
-    distance: "à 350 m",
-    rating: "5.0",
-    image:
-      "https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=900&q=85",
-    imageAlt: "Outils de bricolage prêts à l'emploi",
-    color: "sage",
-  },
-  {
-    id: 2,
-    name: "Taille-haie électrique",
-    category: "Jardin",
-    price: 8,
-    owner: "Thomas",
-    initials: "T",
-    location: "Paris 11e",
-    distance: "à 600 m",
-    rating: "4.9",
-    image:
-      "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=900&q=85",
-    imageAlt: "Jardin verdoyant à entretenir",
-    color: "peach",
-  },
-  {
-    id: 3,
-    name: "Ponceuse excentrique",
-    category: "Bricolage",
-    price: 6,
-    owner: "Inès",
-    initials: "I",
-    location: "Paris 10e",
-    distance: "à 1,2 km",
-    rating: "5.0",
-    image:
-      "https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?auto=format&fit=crop&w=900&q=85",
-    imageAlt: "Équipement et outils dans un atelier",
-    color: "yellow",
-  },
-  {
-    id: 4,
-    name: "Escabeau 5 marches",
-    category: "Maison",
-    price: 4,
-    owner: "Mehdi",
-    initials: "M",
-    location: "Paris 11e",
-    distance: "à 800 m",
-    rating: "4.8",
-    image:
-      "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=900&q=85",
-    imageAlt: "Matériel pour les petits travaux de la maison",
-    color: "blue",
-  },
-];
+const statusLabel: Record<ToolStatus, string> = {
+  available: "Disponible",
+  lent: "Prêté",
+  unavailable: "Indisponible",
+};
+
+// Visuel d'illustration par catégorie (le modèle de données n'a pas de photo).
+const categoryVisual: Record<string, { image: string; color: string }> = {
+  Perçage: { image: "https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=900&q=85", color: "sage" },
+  Jardinage: { image: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=900&q=85", color: "peach" },
+  Peinture: { image: "https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?auto=format&fit=crop&w=900&q=85", color: "yellow" },
+  Nettoyage: { image: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&w=900&q=85", color: "blue" },
+};
+const defaultVisual = categoryVisual["Perçage"];
 
 function ArrowRight() {
   return (
@@ -84,19 +48,6 @@ function ArrowRight() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-    </svg>
-  );
-}
-
-function PinIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 20 20" fill="none">
-      <path
-        d="M16.25 8.333c0 4.583-6.25 9.167-6.25 9.167S3.75 12.916 3.75 8.333a6.25 6.25 0 1 1 12.5 0Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-      <circle cx="10" cy="8.333" r="2.083" stroke="currentColor" strokeWidth="1.5" />
     </svg>
   );
 }
@@ -126,37 +77,54 @@ function SearchIcon() {
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("Tout voir");
   const [query, setQuery] = useState("");
-  const [location, setLocation] = useState("");
-  const [search, setSearch] = useState({ query: "", location: "" });
-  const [favorites, setFavorites] = useState<number[]>([]);
+  const [search, setSearch] = useState("");
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [tools, setTools] = useState<Tool[]>([]);
+  const [loadState, setLoadState] = useState<"loading" | "ok" | "error">("loading");
+
+  // Catalogue chargé depuis l'API (US-01 : GET /api/tools).
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/tools")
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json() as Promise<Tool[]>;
+      })
+      .then((data) => {
+        if (!cancelled) {
+          setTools(data);
+          setLoadState("ok");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLoadState("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const filteredTools = useMemo(() => {
-    const normalizedQuery = search.query.trim().toLocaleLowerCase("fr");
-    const normalizedLocation = search.location.trim().toLocaleLowerCase("fr");
+    const normalizedQuery = search.trim().toLocaleLowerCase("fr");
 
     return tools.filter((tool) => {
       const matchesCategory =
         activeCategory === "Tout voir" || tool.category === activeCategory;
       const matchesQuery =
         !normalizedQuery ||
-        `${tool.name} ${tool.category} ${tool.owner}`
-          .toLocaleLowerCase("fr")
-          .includes(normalizedQuery);
-      const matchesLocation =
-        !normalizedLocation ||
-        tool.location.toLocaleLowerCase("fr").includes(normalizedLocation);
+        `${tool.name} ${tool.category}`.toLocaleLowerCase("fr").includes(normalizedQuery);
 
-      return matchesCategory && matchesQuery && matchesLocation;
+      return matchesCategory && matchesQuery;
     });
-  }, [activeCategory, search]);
+  }, [tools, activeCategory, search]);
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSearch({ query, location });
+    setSearch(query);
     document.getElementById("outils")?.scrollIntoView({ behavior: "smooth" });
   }
 
-  function toggleFavorite(id: number) {
+  function toggleFavorite(id: string) {
     setFavorites((current) =>
       current.includes(id)
         ? current.filter((favoriteId) => favoriteId !== id)
@@ -225,17 +193,7 @@ export default function Home() {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Un outil, un projet..."
-              />
-            </label>
-            <span className="search-divider" />
-            <label className="search-field search-field-location">
-              <PinIcon />
-              <span className="sr-only">Votre quartier</span>
-              <input
-                value={location}
-                onChange={(event) => setLocation(event.target.value)}
-                placeholder="Votre quartier"
+                placeholder="Une perceuse, une ponceuse..."
               />
             </label>
             <button className="search-submit" type="submit" aria-label="Rechercher">
@@ -300,20 +258,43 @@ export default function Home() {
           ))}
         </div>
 
-        {filteredTools.length > 0 ? (
+        {loadState === "loading" && (
+          <div className="empty-state">
+            <span aria-hidden="true">⏳</span>
+            <h3>Chargement du catalogue...</h3>
+          </div>
+        )}
+
+        {loadState === "error" && (
+          <div className="empty-state">
+            <span aria-hidden="true">🔌</span>
+            <h3>Le catalogue est injoignable</h3>
+            <p>Vérifiez que l’API tourne (cd backend, puis npm start).</p>
+          </div>
+        )}
+
+        {loadState === "ok" && tools.length === 0 && (
+          <div className="empty-state">
+            <span aria-hidden="true">🧰</span>
+            <h3>Aucun outil pour le moment</h3>
+          </div>
+        )}
+
+        {loadState === "ok" && tools.length > 0 && filteredTools.length > 0 && (
           <div className="tool-grid">
             {filteredTools.map((tool) => {
               const isFavorite = favorites.includes(tool.id);
+              const visual = categoryVisual[tool.category] ?? defaultVisual;
 
               return (
                 <article className="tool-card" key={tool.id}>
                   <div
-                    className={`tool-image ${tool.color}`}
+                    className={`tool-image ${visual.color}`}
                     role="img"
-                    aria-label={tool.imageAlt}
-                    style={{ backgroundImage: `url("${tool.image}")` }}
+                    aria-label={`Illustration ${tool.category}`}
+                    style={{ backgroundImage: `url("${visual.image}")` }}
                   >
-                    <span className="available-tag"><span /> Disponible</span>
+                    <span className={`available-tag status-${tool.status}`}><span /> {statusLabel[tool.status]}</span>
                     <button
                       className={`favorite-button${isFavorite ? " is-favorite" : ""}`}
                       type="button"
@@ -327,33 +308,26 @@ export default function Home() {
                   <div className="tool-details">
                     <div className="tool-title-row">
                       <h3>{tool.name}</h3>
-                      <span className="rating"><span>★</span> {tool.rating}</span>
                     </div>
-                    <p className="tool-location"><PinIcon /> {tool.location} <span>· {tool.distance}</span></p>
-                    <div className="tool-card-footer">
-                      <div className="owner">
-                        <span className={`owner-avatar owner-${tool.initials.toLowerCase()}`}>{tool.initials}</span>
-                        <span>Prêté par <strong>{tool.owner}</strong></span>
-                      </div>
-                      <p className="tool-price"><strong>{tool.price}€</strong><span> / jour</span></p>
-                    </div>
+                    <p className="tool-location">{tool.category}</p>
                   </div>
                 </article>
               );
             })}
           </div>
-        ) : (
+        )}
+
+        {loadState === "ok" && tools.length > 0 && filteredTools.length === 0 && (
           <div className="empty-state">
             <span aria-hidden="true">🔎</span>
-            <h3>Pas encore d’outil par ici</h3>
-            <p>Essayez un autre mot-clé ou un quartier voisin.</p>
+            <h3>Pas d’outil pour cette recherche</h3>
+            <p>Essayez un autre mot-clé ou une autre catégorie.</p>
             <button
               className="text-link"
               type="button"
               onClick={() => {
                 setQuery("");
-                setLocation("");
-                setSearch({ query: "", location: "" });
+                setSearch("");
                 setActiveCategory("Tout voir");
               }}
             >
