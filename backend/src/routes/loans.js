@@ -18,6 +18,21 @@ export function loansRouter(db) {
   });
 
   // [US-06] empêcher les chevauchements (avant US-04, sur POST /)
+  router.post('/', (req, res, next) => {
+    const { toolId, startDate, endDate } = req.body ?? {};
+    if (typeof startDate !== 'string' || typeof endDate !== 'string') return next();
+
+    // Deux périodes se chevauchent si chacune commence avant la fin de l'autre (bornes incluses).
+    const conflict = db.loans.find(
+      (l) => l.toolId === toolId && l.status === 'accepted' && startDate <= l.endDate && endDate >= l.startDate,
+    );
+    if (conflict) {
+      return res.status(409).json({
+        error: `Outil déjà prêté du ${conflict.startDate} au ${conflict.endDate}`,
+      });
+    }
+    return next();
+  });
 
   // [US-04] demander un emprunt (POST /)
   router.post('/', (req, res) => {
