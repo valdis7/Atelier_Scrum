@@ -6,6 +6,15 @@ export function loansRouter(db) {
   const router = Router();
 
   // [US-08] mes emprunts (GET /mine)
+  router.get('/mine', (req, res) => {
+    if (!req.userId) return res.status(403).json({ error: 'En-tête X-User-Id requis' });
+
+    const mine = db.loans
+      .filter((l) => l.borrowerId === req.userId)
+      .sort((a, b) => a.startDate.localeCompare(b.startDate))
+      .map((l) => ({ ...l, toolName: db.tools.find((t) => t.id === l.toolId)?.name ?? null }));
+    return res.status(200).json(mine);
+  });
 
   // [US-06] empêcher les chevauchements (avant US-04, sur POST /)
 
